@@ -61,7 +61,7 @@ def read_file_to_list(file):
                 'TITLE': r'\[Title\]: (.*)',
                 'SUMMARY': r'\[Summary\]: (.*)',
                 'TUWEN':  r'\[tuwen-Summary\]: (.*)',
-                'DOCID': r'Send.*Result.*DocID\(([^)]*)'}
+                'DOCID': r' -DumpRequest- [0-9a-z]*_[0-9]_(.*?)_.*'}
 
     lists = []
     node = {}
@@ -73,17 +73,19 @@ def read_file_to_list(file):
                 p = re.search(pat_dict[key], line)
                 if p:
                     #print("key:%s, value:%s" % (key, p.group(1))) 
-                    node[key] = p.group(1)
                     if key == 'DOCID':
-                       lists.append(node)
-                       node = {}
+                       if node != {}:
+                           lists.append(node)
+                           node = {}
+                    node[key] = p.group(1)
                     break
+        #append the last node
+        lists.append(node)
 
     return lists
 
-def cmp_lists(list1, list2):
-    #with open('diff.xml', 'w') as f:
-    with open(param_input.diffoutput, 'w') as f:
+def cmp_lists(list1, list2, diffoutput):
+    with open(diffoutput, 'w') as f:
         f.write(xml_head)
         for i in range(len(list1)):
             same = True
@@ -127,8 +129,18 @@ def parse_option_args():
     #print "options:", options
     return options
 
+def main():
+    try:
+        param_input = parse_option_args()
+        if param_input.onlinefile == None or param_input.testfile == None:
+            print 'please enter testlog file and onlinelog file\n'
+            sys.exit()
+        node_list1 = read_file_to_list(param_input.onlinefile)
+        node_list2 = read_file_to_list(param_input.testfile)
+        cmp_lists(node_list1, node_list2, param_input.diffoutput)
+    except Exception, e:
+        print e
+
 if __name__=='__main__':
-   param_input = parse_option_args()
-   node_list1 = read_file_to_list(param_input.onlinefile)
-   node_list2 = read_file_to_list(param_input.testfile)
-   cmp_lists(node_list1, node_list2)
+    main()
+    print "DONE-----"
