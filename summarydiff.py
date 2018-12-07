@@ -2,6 +2,8 @@
 #coding:gbk
 import sys
 import re
+from optparse import OptionParser
+
 
 xml_head = '''
 <?xml version="1.0" encoding="utf-16"?>
@@ -80,7 +82,8 @@ def read_file_to_list(file):
     return lists
 
 def cmp_lists(list1, list2):
-    with open('diff.xml', 'w') as f:
+    #with open('diff.xml', 'w') as f:
+    with open(param_input.diffoutput, 'w') as f:
         f.write(xml_head)
         for i in range(len(list1)):
             same = True
@@ -114,7 +117,18 @@ def translate_and_format(node):
     return node_xml
 
 
+def parse_option_args():
+    MSG_USAGE = '[-o<onlinefile>] [-t<testfile>] [-d<output>]'
+    optParser = OptionParser(MSG_USAGE)
+    optParser.add_option("-o", "--onlinefile", action="store", type="string", dest="onlinefile", help="log file of Online Code")
+    optParser.add_option("-t", "--testfile", action="store", type="string", dest="testfile", help="log file of Test Code")
+    optParser.add_option("-d", "--diffoutput", action="store", type="string", dest="diffoutput", default="diff.xml", help="diff of online and test log file,default output is diff.xml")
+    options, args = optParser.parse_args()
+    #print "options:", options
+    return options
+
 if __name__=='__main__':
-   node_list1 = read_file_to_list(sys.argv[1])
-   node_list2 = read_file_to_list(sys.argv[2])
+   param_input = parse_option_args()
+   node_list1 = read_file_to_list(param_input.onlinefile)
+   node_list2 = read_file_to_list(param_input.testfile)
    cmp_lists(node_list1, node_list2)
