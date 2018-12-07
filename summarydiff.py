@@ -98,11 +98,8 @@ def translate_and_format(node):
 
     normal_data = {}
     for key in ['docId', 'url', 'title', 'summary']:
-        normal_data[k] = node.get(key_map[key])
+        normal_data[key] = node.get(key_map[key])
   
-    #tuwen_data = {'docId':node['DOCID'], 'url':node['URL'], 'title':node['TITLE'], 'imageurl':node['URL'], 'tuwen_summary':node['TUWEN']}
-    #normal_data = {'docId':node['DOCID'], 'url':node['URL'], 'title':node['TITLE'], 'summary':node['SUMMARY']}
-
     if re.search(r'<item><tplid>.+<//tplid>', node['SUMMARY']):
         node_xml = structured_template % structured_data
     elif node.get('TUWEN') != '':
