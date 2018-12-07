@@ -3,45 +3,33 @@
 import sys
 import re
 
-def readfile(filename):
-    try:
-        file = open(filename)
-    except Exception, e:
-        print e
-    content = file.readlines()
-    file.close()
-    return content
+structured_template = '''
+<doc docId="%(docId)s">
+%(summary)s
+</doc>'''
 
+tuwen_template = '''
+<doc docId="%(docId)s">
+<item>
+<display>
+<url><![CDATA[%(url)s]]></url>
+<title><![CDATA[%(title)s]]></title>
+<imageurl><![CDATA[%(url)s]]></imageurl>
+<imagecontent><![CDATA[%(tuwen_summary)s]]></imagecontent>
+</display>
+</item>
+</doc>'''
 
-def extract_re(infile, outfile):
-   docid_pat = re.compile(r'.+CWebSummary::.+DocID\((.+)\).+')
-   url_pat = re.compile(r'.*\[Url\]: (.+)')
-   title_pat = re.compile(r'.*\[Title\]: (.+)')
-   summary_pat = re.compile(r'.*\[Summary\]: (.+)')
-   tuwen_pat = re.compile(r'.*\[tuwen-Summary\]: (.+)')
-
-   f = open(outfile, 'w')
-   data = readfile(infile)
-   for line in data:
-       if docid_pat.match(line):
-          f.write('\n===\n')
-          f.write('DOCID:' + docid_pat.match(line).group(1))
-       elif url_pat.match(line):
-          f.write('URL:' + url_pat.match(line).group(1))
-       elif title_pat.match(line):
-          f.write('TITLE:' + title_pat.match(line).group(1))
-       elif summary_pat.match(line):
-          f.write('SUMMARY:' + summary_pat.match(line).group(1))
-       elif tuwen_pat.match(line):
-          f.write('TUWEN:' + tuwen_pat.match(line).group(1))
-       else:
-          pass
-   f.close()
-
-def getdiff(testfile, onlinefile):
-   test_res =  readfile(testfile)
-   online_res = readfile(onlinefile)
-   return test_res
+normal_template = '''
+<doc docId="%(docId)s">
+<item>
+<display>
+<url><![CDATA[%(url)s]]></url>
+<title><![CDATA[%(title)s]]></title>
+<content><![CDATA[%(summary)s]]></content>
+</display>
+</item>
+</doc>'''
 
 def read_file_to_list(file):
     pat_dict = {'DOCID': r' CWebSummary::.+DocID\(([^)]*)',
@@ -59,49 +47,84 @@ def read_file_to_list(file):
             for key in pat_dict.keys():
                 p = re.search(pat_dict[key], line)
                 if p:
-                    print("%s:%s" % (key, p.group(1)))
                     # 
                     if key == 'DOCID':
-                        if node is not {}:
+                        if node != {}:
                             lists.append(node)
                             node = {}
 
                     node[key] = p.group(1)
                     break
+        lists.append(node)    #append the last node to list
 
-    print(lists)
     return lists
 
 def cmp_lists(list1, list2):
-    for i in len(list1):
+    for i in range(len(list1)):
         same = True
         for key in ['DOCID', 'URL', 'TITLE', 'SUMMARY', 'TUWEN']:
-            if list1[i][key] != list2[i][key]:
+            if key not in list1[i] and key not in list2[i]:
+                continue
+            elif key not in list1[i] or key not in list2[i]:
                 same = False
                 break
+            else:
+                if list1[i][key] != list2[i][key]:
+                    same = False
+                    break
 
-        # 
+        # Translate and format and write
         if not same:
-            # Translate and format
-            translate_and_format(list1[i])
-            translate_and_format(list2[i])
+            with open('diff.xml', 'w') as f:
+                f.write(translate_and_format(list1[i]))
+                f.write(translate_and_format(list2[i]))
 
-
-    return
 
 def translate_and_format(node):
-    pass
-    return
+    key_map = {'docId':'DOCID',
+               'summary':'SUMMARY',
+               'url':'URL',
+               'title':'TITLE',
+               'tuwen_summary':'SUMMARY',
+               'imageurl':'URL'}
+
+    structured_data = {}
+    for key in ['docId', 'summary']:
+        structured_data[key] = node.get(key_map[key])
+ 
+    tuwen_data = {}
+    for key in ['docId', 'url', 'title', 'imageurl', 'tuwen_summary']:
+        tuwen_data[key] = node.get(key_map[key])
+
+    normal_data = {}
+    for key in ['docId', 'url', 'title', 'summary']:
+        normal_data[k] = node.get(key_map[key])
+  
+    #tuwen_data = {'docId':node['DOCID'], 'url':node['URL'], 'title':node['TITLE'], 'imageurl':node['URL'], 'tuwen_summary':node['TUWEN']}
+    #normal_data = {'docId':node['DOCID'], 'url':node['URL'], 'title':node['TITLE'], 'summary':node['SUMMARY']}
+
+    if re.search(r'<item><tplid>.+<//tplid>', node['SUMMARY']):
+        node_xml = structured_template % structured_data
+    elif node.get('TUWEN') != '':
+        node_xml = tuwen_template % tuwen_data
+    else:
+        node_xml = normal_template % normal_data
+    return node_xml
+
+
 
 if __name__=='__main__':
-   #test 
-   #extract_re(sys.argv[1], sys.argv[2])
-   #online
-   #extract_re(sys.argv[1], sys.argv[3])
-   #res = getdiff(sys.argv[1], sys.argv[2])
-   #res = readfile(sys.argv[1])
-   #print res[4]
-   read_file_to_list(sys.argv[1])
+
+   node_list1 = read_file_to_list(sys.argv[1])
+   node_list2 = read_file_to_list(sys.argv[2])
+   cmp_lists(node_list1, node_list2)
+
+   #for i in node_list1:
+      #print i
+
+
+  
+   
 
 
 
