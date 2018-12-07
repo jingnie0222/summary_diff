@@ -1,7 +1,5 @@
 #!/usr/bin/python
 #coding:gbk
-#DOCID regex is CWebSummary::.+DocID\(([^)]*)
-
 import sys
 import re
 
@@ -43,12 +41,25 @@ normal_template = '''
 </doc>\n
 '''
 
+#read db failed or request be canceled
+noresult_template = '''
+<doc docId="%(DOCID)s">
+<item>
+<display>
+<url><![CDATA[www.sogou.com]]></url>
+<title><![CDATA[NO Result]]></title>
+<content><![CDATA[NO Result, Check Errorlog Please!]]></content>
+</display>
+</item>
+</doc>\n
+'''
+
 def read_file_to_list(file):
-    pat_dict = {'DOCID': r' CWebSummary::.+DocID\(([^)]*)',
-                'URL':   r'\[Url\]: (.*)',
+    pat_dict = {'URL':   r'\[Url\]: (.*)',
                 'TITLE': r'\[Title\]: (.*)',
                 'SUMMARY': r'\[Summary\]: (.*)',
-                'TUWEN':  r'\[tuwen-Summary\]: (.*)'}
+                'TUWEN':  r'\[tuwen-Summary\]: (.*)',
+                'DOCID': r'Send.*Result.*DocID\(([^)]*)'}
 
     lists = []
     node = {}
@@ -59,16 +70,12 @@ def read_file_to_list(file):
             for key in pat_dict.keys():
                 p = re.search(pat_dict[key], line)
                 if p:
-                    # 
+                    #print("key:%s, value:%s" % (key, p.group(1))) 
+                    node[key] = p.group(1)
                     if key == 'DOCID':
-                        if node != {}:
-                            lists.append(node)
-                            node = {}
-
-                    node[key] = p.group(1).strip()
+                       lists.append(node)
+                       node = {}
                     break
-        if node !={}:
-            lists.append(node)    #append the last node to list
 
     return lists
 
@@ -98,18 +105,16 @@ def cmp_lists(list1, list2):
 def translate_and_format(node):
     if 'SUMMARY'in node and re.search(r'<item><tplid>[0-9]+', node['SUMMARY']):
         node_xml = structured_template % node
-    elif 'TUWEN' in node and node['TUWEN'] != '':
+    elif 'TITLE' in node and 'TUWEN' in node and node['TUWEN'] != '':
         node_xml = tuwen_template % node
-    else:
+    elif 'TITLE' in node and 'SUMMARY' in node:
         node_xml = normal_template % node
+    else:
+        node_xml = noresult_template % node
     return node_xml
-
 
 
 if __name__=='__main__':
    node_list1 = read_file_to_list(sys.argv[1])
    node_list2 = read_file_to_list(sys.argv[2])
-   print ("list1 length : %d", len(node_list1)) 
-   print ("list2 length : %d", len(node_list2)) 
    cmp_lists(node_list1, node_list2)
-
