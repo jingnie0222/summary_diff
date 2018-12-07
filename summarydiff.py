@@ -15,7 +15,7 @@ xml_tail = '\n</DOCUMENT>'
 structured_template = '''
 <doc docId="%(DOCID)s">
 %(SUMMARY)s
-</doc>\n
+</doc>
 '''
 
 tuwen_template = '''
@@ -28,7 +28,7 @@ tuwen_template = '''
 <imagecontent><![CDATA[%(TUWEN)s]]></imagecontent>
 </display>
 </item>
-</doc>\n
+</doc>
 '''
 
 normal_template = '''
@@ -40,7 +40,7 @@ normal_template = '''
 <content><![CDATA[%(SUMMARY)s]]></content>
 </display>
 </item>
-</doc>\n
+</doc>
 '''
 
 #read db failed or request be canceled
@@ -53,7 +53,7 @@ noresult_template = '''
 <content><![CDATA[NO Result, Check Errorlog Please!]]></content>
 </display>
 </item>
-</doc>\n
+</doc>
 '''
 
 def read_file_to_list(file):
@@ -61,14 +61,13 @@ def read_file_to_list(file):
                 'TITLE': r'\[Title\]: (.*)',
                 'SUMMARY': r'\[Summary\]: (.*)',
                 'TUWEN':  r'\[tuwen-Summary\]: (.*)',
-                'DOCID': r' -DumpRequest- [0-9a-z]*_[0-9]_(.*?)_.*'}
+                'DOCID': r' -DumpRequest- [0-9a-z]*_[0-9]_(.*?)_(.*?)_.*'}
 
     lists = []
     node = {}
     with open(file, 'r') as f:
         for line in f.readlines():
             # line --> node
-            #print("-->%s\n" % line)
             for key in pat_dict.keys():
                 p = re.search(pat_dict[key], line)
                 if p:
@@ -77,10 +76,13 @@ def read_file_to_list(file):
                        if node != {}:
                            lists.append(node)
                            node = {}
-                    node[key] = p.group(1)
+                       node[key] = p.group(1) + "===query:" + p.group(2)   # group(1) is docid, group(2) is query
+                    else:
+                       node[key] = p.group(1)
+                    #print("key:%s, value:%s" %(key, node[key]))
                     break
         #append the last node
-        lists.append(node)
+        lists.append(node)   
 
     return lists
 
